@@ -41,8 +41,8 @@ vector<User> gen_population(int size) {
 	for (int i = 0; i < size; ++i) {
 		double X1 = norm(GetGenerator());
 		double X2 = norm(GetGenerator());
-		population[i].Y1 = X1 + 3.0;
-		population[i].Y2 = (X1 + X2) / 2.0 + 4.0;
+		population[i].Y1 = X1 + 5.0;
+		population[i].Y2 = (X1 + X2) / 2.0 + 7.0;
 	}
 	vector<uint32_t> indexes;
 	for (int i = 0; i < size; ++i) {
