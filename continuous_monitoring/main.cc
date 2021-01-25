@@ -212,8 +212,8 @@ void multivariate_normal_simulation(bool early_stopping=false, bool path_likelih
 
 
 int main() {
-    // multivariate_normal_simulation(true,false,false);
-    // multivariate_normal_simulation(true,true,false);
+    multivariate_normal_simulation(true,false,false);
+    multivariate_normal_simulation(true,true,false);
 
     multivariate_normal_simulation(true,true,true);
     return 0;
