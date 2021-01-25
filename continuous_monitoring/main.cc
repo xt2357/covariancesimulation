@@ -99,6 +99,15 @@ void multivariate_normal_simulation(bool early_stopping=false, bool path_likelih
     double discovery = 0, false_discovery = 0;
     double h1_cnt = 0, h0_cnt = 0;
 
+    cout << " T: " << kT 
+         << " N: " << kN 
+         << " BucketSize: " << kBucketSize 
+         << " Runs: " << kRuns 
+         << " P: " << kP 
+         << " Delta: " << kDelta
+         << " K: " << kK
+         << endl; 
+
     // construct a invertible transformation A and make Samples = AX+delta
     // where X consist of i.i.d standard normal random variables
     MatrixXd delta = MatrixXd::Ones(kT, kN) * kDelta;
@@ -203,8 +212,8 @@ void multivariate_normal_simulation(bool early_stopping=false, bool path_likelih
 
 
 int main() {
-    multivariate_normal_simulation(true,false,false);
-    multivariate_normal_simulation(true,true,false);
+    // multivariate_normal_simulation(true,false,false);
+    // multivariate_normal_simulation(true,true,false);
 
     multivariate_normal_simulation(true,true,true);
     return 0;
