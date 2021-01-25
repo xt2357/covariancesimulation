@@ -83,13 +83,13 @@ void calc_bucket_based_cor_matrix(const MatrixXd &samples, const int T, const in
     }
 }
 
-void multivariate_normal_simulation(bool early_stopping=false, bool path_likelihood=false, bool use_estimated_cor=false) {
+void multivariate_normal_simulation(const int bucket_size, bool early_stopping=false, bool path_likelihood=false, bool use_estimated_cor=false) {
     // number of periods
     const int kT = 30;
     // number of users
     const int kN = 4000;
     // number of buckets
-    const int kBucketSize = kT*10;
+    const int kBucketSize = bucket_size;
     const int kRuns = 20000;
     // probability of H1 to be true
     const double kP = 0.5;
@@ -145,8 +145,8 @@ void multivariate_normal_simulation(bool early_stopping=false, bool path_likelih
     }
     std::uniform_real_distribution<double> uni(0.0,1.0);
     for (int r = 0; r < kRuns; ++r) {
-        auto dice = uni(Generator::Get());
-        int h = dice <= kP ? 1 : 0;
+        // auto dice = uni(Generator::Get());
+        int h = r < kP * kRuns ? 1 : 0;
         std::normal_distribution<double> norm(0, 1.0);
         
         MatrixXd samples = MatrixXd::Zero(kT, kN);
@@ -212,9 +212,10 @@ void multivariate_normal_simulation(bool early_stopping=false, bool path_likelih
 
 
 int main() {
-    multivariate_normal_simulation(true,false,false);
-    multivariate_normal_simulation(true,true,false);
+    multivariate_normal_simulation(300, true,false,false);
+    multivariate_normal_simulation(300, true,true,false);
 
-    multivariate_normal_simulation(true,true,true);
+    multivariate_normal_simulation(300, true,true,true);
+    multivariate_normal_simulation(200, true,true,true);
     return 0;
 }
