@@ -231,7 +231,8 @@ void test(int population_size, double ratio, int runs, const vector<int> bucket_
 }
 
 int main() {
-	// test(10000, 0.1, 100000, {100, 200, 500, 1000});
+	test(10000, 0.1, 100000, {100, 200, 500, 1000});
+	
 	test(10000, 0.2, 100000, {});
 	test(10000, 0.1, 100000, {});
 	test(10000, 0.05, 100000, {});
