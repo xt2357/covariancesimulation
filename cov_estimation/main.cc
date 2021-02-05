@@ -142,7 +142,7 @@ double var(const vector<double> &data) {
 	return cov(repeat);
 }
 
-double naive_approach(const vector<User> &samples) {
+double naive_approach(const vector<User> &samples, uint32_t &running_time) {
 	double n = 0.0;
 	vector<pair<double, double>> obs;
 	for (auto &s : samples) {
@@ -151,10 +151,16 @@ double naive_approach(const vector<User> &samples) {
 			n += 1.0;
 		}
 	}
-	return cov(obs) / n;
+
+	auto start = chrono::steady_clock::now();
+	auto ans = cov(obs) / n;
+	auto end = chrono::steady_clock::now();
+	auto diff = end - start;
+	running_time = chrono::duration_cast<chrono::nanoseconds>(diff).count();
+	return ans;
 }
 
-double delta_method_after_data_augmentation(const vector<User> &samples) {
+double delta_method_after_data_augmentation(const vector<User> &samples, uint32_t &running_time) {
 	// metric1: mean_a/mean_b, metric2: mean_c/mean_d
 	vector<pair<double, double>> ac,bd,ad,bc;
 	double n = 0.0;
@@ -167,17 +173,23 @@ double delta_method_after_data_augmentation(const vector<User> &samples) {
 			n += 1.0;
 		}
 	}
+
+	auto start = chrono::steady_clock::now();
 	auto avg_ac = mean(ac);
 	auto avg_bd = mean(bd);
-	return (
+	auto ans = (
 		cov(ac)/avg_bd.first/avg_bd.second+
 		cov(bd)*avg_ac.first*avg_ac.second/pow(avg_bd.first*avg_bd.second, 2.0)-
 		cov(ad)*avg_ac.second/avg_bd.first/pow(avg_bd.second, 2.0)-
 		cov(bc)*avg_ac.first/pow(avg_bd.first, 2.0)/avg_bd.second
 	)/n;
+	auto end = chrono::steady_clock::now();
+	auto diff = end - start;
+	running_time = chrono::duration_cast<chrono::nanoseconds>(diff).count();
+	return ans;
 }
 
-double bucket_based(const vector<User> &samples, int bucket_size, double ratio) {
+double bucket_based(const vector<User> &samples, int bucket_size, double ratio, uint32_t &running_time) {
 	// metric1: s1/s2, metric2: s3/s4
 	vector<double> s1(bucket_size),s2(bucket_size),s3(bucket_size),s4(bucket_size);
 	std::uniform_int_distribution<int> uniform(0,bucket_size-1);
@@ -195,14 +207,20 @@ double bucket_based(const vector<User> &samples, int bucket_size, double ratio) 
 		s14.push_back({s1[i], s4[i]});
 		s23.push_back({s2[i], s3[i]});
 	}
+
+	auto start = chrono::steady_clock::now();
 	auto avg_13 = mean(s13);
 	auto avg_24 = mean(s24);
-	return (1.0 - ratio) * bucket_size * (
+	auto ans = (1.0 - ratio) * bucket_size * (
 		cov(s13)/(avg_24.first*bucket_size)/(avg_24.second*bucket_size)+
 		cov(s24)*(avg_13.first*bucket_size)*(avg_13.second*bucket_size)/pow(avg_24.first*bucket_size*avg_24.second*bucket_size, 2.0)-
 		cov(s14)*(avg_13.second*bucket_size)/(avg_24.first*bucket_size)/pow(avg_24.second*bucket_size, 2.0)-
 		cov(s23)*(avg_13.first*bucket_size)/pow(avg_24.first*bucket_size, 2.0)/(avg_24.second*bucket_size)
 	);
+	auto end = chrono::steady_clock::now();
+	auto diff = end - start;
+	running_time = chrono::duration_cast<chrono::nanoseconds>(diff).count();
+	return ans;
 }
 
 void test(int population_size, double ratio, int runs, const vector<int> bucket_sizes) {
@@ -210,32 +228,38 @@ void test(int population_size, double ratio, int runs, const vector<int> bucket_
 	vector<pair<double, double>> metrics;
 	vector<double> naive, delta;
 	unordered_map<int, vector<double>> bucket_size_2_results;
+	uint64_t naive_ms = 0, delta_ms = 0;
+	unordered_map<int, uint64_t> bucket_ms;
 	for (int r = 0; r < runs; ++r) {
 		auto samples = sampling(population, ratio);
+		uint32_t run_time = 0;
 		metrics.push_back(calc_metrics(samples));
-		naive.push_back(naive_approach(samples));
-		delta.push_back(delta_method_after_data_augmentation(samples));
+		naive.push_back(naive_approach(samples, run_time));
+		naive_ms += run_time;
+		delta.push_back(delta_method_after_data_augmentation(samples, run_time));
+		delta_ms += run_time;
 		for (int i = 0; i < bucket_sizes.size(); ++i) {
-			bucket_size_2_results[bucket_sizes[i]].push_back(bucket_based(samples, bucket_sizes[i], ratio));
+			bucket_size_2_results[bucket_sizes[i]].push_back(bucket_based(samples, bucket_sizes[i], ratio, run_time));
+			bucket_ms[bucket_sizes[i]] += run_time;
 		}
 	}
 	double ground_truth = cov(metrics);
 	printf(
-		"ground_truth: %lf\nnaive: %lf, %lf\ndelta: %lf, %lf\n",
-		ground_truth, mean(naive), sqrt(var(naive)), mean(delta), sqrt(var(delta))
+		"ground_truth: %lf\nnaive: %lf, %lf, run_time: %lu\ndelta: %lf, %lf, run_time: %lu\n",
+		ground_truth, mean(naive), sqrt(var(naive)), naive_ms/1000000, mean(delta), sqrt(var(delta)), delta_ms/1000000
 	);
 	for (int bucket_size : bucket_sizes) {
 		auto &results = bucket_size_2_results[bucket_size];
-		printf("bucket size %d: %lf, %lf\n", bucket_size, mean(results), sqrt(var(results)));
+		printf("bucket size %d: %lf, %lf, run_time: %lu\n", bucket_size, mean(results), sqrt(var(results)), bucket_ms[bucket_size]/1000000);
 	}
 }
 
 int main() {
 	test(10000, 0.1, 100000, {100, 200, 500, 1000});
-	
-	test(10000, 0.2, 100000, {});
-	test(10000, 0.1, 100000, {});
-	test(10000, 0.05, 100000, {});
-	test(10000, 0.01, 100000, {});
+
+	// test(10000, 0.2, 100000, {});
+	// test(10000, 0.1, 100000, {});
+	// test(10000, 0.05, 100000, {});
+	// test(10000, 0.01, 100000, {});
 	return 0;
 }
