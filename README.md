@@ -1,5 +1,5 @@
 # covariancesimulation
-simulations about covanriance estimation
+Code for simulations in *Covariance Estimation and its Application in Large-Scale Online Controlled Experiments*
 
 ## cov_estimation
 Simulation for Section Ⅲ.C
